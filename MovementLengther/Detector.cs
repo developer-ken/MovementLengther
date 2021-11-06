@@ -17,6 +17,8 @@ namespace MovementLengther
         }
 
         public event Action<Point> OnMovement;
+        public event Action<Point> OnLeftHit;
+        public event Action<Point> OnRightHit;
 
         public double MoveDist = 0;
         public bool Acceptable = false;
@@ -44,12 +46,13 @@ namespace MovementLengther
             Mat gray1 = rt.T(frame.Clone()), gray2 = rt.T(frame.Clone());
             Cv2.CvtColor(background, gray1, ColorConversionCodes.BGR2GRAY);
             Cv2.CvtColor(frame, gray2, ColorConversionCodes.BGR2GRAY);
-            Mat diff = rt.T(gray2.Clone()).MedianBlur(99);
+            Mat diff = rt.T(gray2.Clone());
+            Cv2.MedianBlur(diff, diff, 99);
             Cv2.Absdiff(gray1, gray2, diff);
             Mat diff_thresh = diff.Clone();
-            Cv2.Threshold(diff, diff_thresh, 28, 255, ThresholdTypes.Binary);
+            Cv2.Threshold(diff, diff_thresh, 35, 255, ThresholdTypes.Binary);
             Cv2.Blur(diff_thresh, diff_thresh, new Size(8, 8));
-            Cv2.Threshold(diff_thresh, diff_thresh, 28, 255, ThresholdTypes.Binary);
+            Cv2.Threshold(diff_thresh, diff_thresh, 35, 255, ThresholdTypes.Binary);
             //diff_thresh
             rt.Dispose();
             return diff_thresh;
@@ -61,13 +64,13 @@ namespace MovementLengther
             Mat diff = rt.T(background.Clone());
             Cv2.Absdiff(background, frame, diff);
             Mat diff_thresh = diff.Clone();
-            Cv2.Threshold(diff, diff_thresh, 28, 255, ThresholdTypes.Binary);
+            Cv2.Threshold(diff, diff_thresh, 35, 255, ThresholdTypes.Binary);
             Cv2.Blur(diff_thresh, diff_thresh, new Size(8, 8));
-            Cv2.Threshold(diff_thresh, diff_thresh, 28, 255, ThresholdTypes.Binary);
+            Cv2.Threshold(diff_thresh, diff_thresh, 35, 255, ThresholdTypes.Binary);
             return diff_thresh;
         }
 
-        public void Alg(IPCamera cam)
+        public void Alg(IPCamera cam, bool flip = false)
         {
             Mat last = null;
             Mat lastdiff = null;
@@ -95,11 +98,15 @@ namespace MovementLengther
             {
                 ResourcesTracker rt = new ResourcesTracker();
                 Mat frame = cam.GetLatestFrame();
+                if (flip)
+                    Cv2.Flip(frame, frame, FlipMode.Y);
+                //Cv2.Resize(frame, frame, new Size(400, 400));
                 if (last == null)
                 {
                     last = frame;
                     continue;
                 }
+
                 var diff = rt.T(MovementDetectRGB(last, frame));
                 last.Dispose();
                 last = frame;
@@ -114,24 +121,28 @@ namespace MovementLengther
                 lastdiff.Dispose();
                 lastdiff = diff;
 
-                Mat kernel = rt.T(Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3), new Point(-1, -1)));
-                Cv2.MorphologyEx(diff, diff, MorphTypes.Close, kernel, new Point(-1, -1));
+
+
+                //Mat kernel = rt.T(Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3), new Point(-1, -1)));
+                //Cv2.MorphologyEx(diff, diff, MorphTypes.Close, kernel, new Point(-1, -1));
                 //kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3), new Point(-1, -1));
                 //Cv2.MorphologyEx(diff, diff, MorphTypes.Open, kernel, new Point(-1, -1));
                 Cv2.FindContours(diff, out Point[][] conts, out HierarchyIndex[] h, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+                //kernel.Dispose();
 
                 List<Rect> targets = new();
 
-                using (Mat f = frame.Clone())
+                Mat f = frame.Clone();
                 {
-                    List<Point> p = new List<Point>();
-                    foreach (var obj in conts)
-                    {
-                        var recb = Cv2.BoundingRect(obj);
-                        if (recb.Width * recb.Height >= frame.Width * frame.Height / 3000)
-                            p.AddRange(obj);
-                    }
-                    var rect = Cv2.BoundingRect(p.ToArray());
+                    //List<Point> p = new List<Point>();
+                    //foreach (var obj in conts)
+                    //{
+                    //    var recb = Cv2.BoundingRect(obj);
+                    //    if (recb.Width * recb.Height >= frame.Width * frame.Height / 3500)
+                    //        p.AddRange(obj);
+                    //}
+                    if (conts.Length == 0) continue;
+                    var rect = Cv2.BoundingRect(conts.Last());
                     //if (rect.Contains(lastrect.BottomRight - lastrect.TopLeft)) continue;
                     var csize = (rect & lastrect).Size;
                     var coll = csize.Height * csize.Width;
@@ -208,17 +219,19 @@ namespace MovementLengther
                         Leftend.Hit = true;
                         Leftend.Position = refpoint;
                         Leftend.Timestamp = DateTime.Now;
+                        OnLeftHit?.Invoke(refpoint);
                         watchdog = 0;
                         RLock = false;
                     }
                     else
                     if (refpoint.X >= Rightend.Position.X)
                     {
-                        if (!RLock)
+                        //if (!RLock)
                         {
                             Rightend.Hit = true;
                             Rightend.Position = refpoint;
                             Rightend.Timestamp = DateTime.Now;
+                            OnRightHit?.Invoke(refpoint);
                             watchdog = 0;
                         }
                     }
@@ -230,7 +243,7 @@ namespace MovementLengther
                             var item = new ResultPair()
                             {
                                 MiliDuration = Math.Abs((Leftend.Timestamp - Rightend.Timestamp).TotalMilliseconds),
-                                Movement = Leftend.Position.DistanceTo(Rightend.Position)
+                                Movement = Math.Abs(Leftend.Position.X - Rightend.Position.X)
                             };
                             Results.Enqueue(item);
                             OnNewResultArrive?.Invoke(item);
@@ -242,9 +255,12 @@ namespace MovementLengther
                             Rightend.Timestamp = DateTime.Now;
                         }
                     }
-
-                    Cv2.ImShow(cam.StreamUrl, diff);
-                    Cv2.WaitKey(1);
+                    Program.TaskList.Enqueue(() =>
+                    {
+                        Cv2.ImShow(cam.StreamUrl, f);
+                        Cv2.WaitKey(1);
+                        f.Dispose();
+                    });
                 }
                 rt.Dispose();
             }
