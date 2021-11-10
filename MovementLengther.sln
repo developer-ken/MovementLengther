@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31321.278
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MovementLengther", "MovementLengther\MovementLengther.csproj", "{B22597CF-73FB-4605-BDC3-8C783613E757}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MovementLengther", "MovementLengther\MovementLengther.csproj", "{B22597CF-73FB-4605-BDC3-8C783613E757}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HardwareInterface", "HardwareInterface-master\HardwareInterface.csproj", "{3EB2A383-FAF0-4C04-BB8E-BA7C0B7D4475}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Calibrate", "Calibrate\Calibrate.csproj", "{A38442B6-24B6-4E81-BB01-854A8A5FF796}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{3EB2A383-FAF0-4C04-BB8E-BA7C0B7D4475}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3EB2A383-FAF0-4C04-BB8E-BA7C0B7D4475}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3EB2A383-FAF0-4C04-BB8E-BA7C0B7D4475}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A38442B6-24B6-4E81-BB01-854A8A5FF796}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A38442B6-24B6-4E81-BB01-854A8A5FF796}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A38442B6-24B6-4E81-BB01-854A8A5FF796}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A38442B6-24B6-4E81-BB01-854A8A5FF796}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

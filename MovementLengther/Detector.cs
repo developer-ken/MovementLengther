@@ -92,7 +92,6 @@ namespace MovementLengther
                 }
             })).Start();
 
-            bool RLock = false;
 
             while (true)
             {
@@ -116,19 +115,17 @@ namespace MovementLengther
                     lastdiff = diff;
                     continue;
                 }
-                //diff = Detector.MovementDetectGray(diff, lastdiff);
-                //diff = Detector.MovementDetectGray(diff, lastdiff);
                 lastdiff.Dispose();
                 lastdiff = diff;
 
 
 
-                //Mat kernel = rt.T(Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3), new Point(-1, -1)));
-                //Cv2.MorphologyEx(diff, diff, MorphTypes.Close, kernel, new Point(-1, -1));
-                //kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3), new Point(-1, -1));
-                //Cv2.MorphologyEx(diff, diff, MorphTypes.Open, kernel, new Point(-1, -1));
+                Mat kernel = rt.T(Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3), new Point(-1, -1)));
+                Cv2.MorphologyEx(diff, diff, MorphTypes.Close, kernel, new Point(-1, -1));
+                kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3), new Point(-1, -1));
+                Cv2.MorphologyEx(diff, diff, MorphTypes.Open, kernel, new Point(-1, -1));
                 Cv2.FindContours(diff, out Point[][] conts, out HierarchyIndex[] h, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
-                //kernel.Dispose();
+                kernel.Dispose();
 
                 List<Rect> targets = new();
 
@@ -248,10 +245,11 @@ namespace MovementLengther
                             Results.Enqueue(item);
                             OnNewResultArrive?.Invoke(item);
                             Leftend.Hit = false;
-                            Leftend.Position = refpoint;
+                            var pos = Leftend.Position;
+                            Leftend.Position = Rightend.Position;
                             Leftend.Timestamp = DateTime.Now;
                             Rightend.Hit = false;
-                            Rightend.Position = refpoint;
+                            Rightend.Position = pos;
                             Rightend.Timestamp = DateTime.Now;
                         }
                     }
